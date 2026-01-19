@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CheckoutState } from "~~/types/general";
 
+const api = useApi();
 const { stripePublicKey } = useRuntimeConfig().public;
 const colorMode = useColorMode();
 const { locale } = useI18n();
@@ -19,9 +20,8 @@ watch(
   () => orderTotal.value,
   async (n, o) => {
     if (n !== o) {
-      const { createStripePaymentIntent } =
-        await GqlCreateStripePaymentIntent();
-      initStripe(createStripePaymentIntent);
+      const result = await api.createStripePaymentIntent();
+      initStripe(result.createStripePaymentIntent);
     }
   },
 );
@@ -40,9 +40,8 @@ onMounted(() => {
     stripe.value = Stripe(stripePublicKey, { locale: locale.value });
 
     if (state.code === "stripe-payment") {
-      const { createStripePaymentIntent } =
-        await GqlCreateStripePaymentIntent();
-      initStripe(createStripePaymentIntent);
+      const result = await api.createStripePaymentIntent();
+      initStripe(result.createStripePaymentIntent);
     }
   });
 });

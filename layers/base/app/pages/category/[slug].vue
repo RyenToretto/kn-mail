@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { MenuCollections, ChildCollection } from "~~/types/collection";
 
+const api = useApi();
 const { i18NBaseUrl } = useRuntimeConfig().public;
 const route = useRoute();
 const slug = route.params.slug as string;
@@ -27,13 +28,16 @@ const childCollections = computed(() =>
 
 const { take, page, skip, to } = usePagination(12);
 
-const { data: collectionProducts } = await useAsyncGql(
-  "GetCollectionProducts",
-  {
-    slug,
-    skip: skip,
+const { data: collectionProducts } = await useAsyncData(
+  `collection-products-${slug}-${page.value}`,
+  () => api.searchProducts({
+    collectionSlug: slug,
+    skip: skip.value,
     take: take,
-  },
+  }),
+  {
+    watch: [page],
+  }
 );
 
 const products = computed(() => collectionProducts.value?.search?.items ?? []);

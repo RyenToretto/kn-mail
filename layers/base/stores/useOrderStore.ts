@@ -5,6 +5,7 @@ import type {
 } from "~~/types/order";
 
 export const useOrderStore = defineStore("order", () => {
+  const api = useApi();
   const loading = ref(false);
   const error = ref<string | null>(null);
   // Status is not wired up yet
@@ -21,11 +22,8 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { activeOrder } = await (type === "detail"
-        ? GqlGetActiveOrderDetail()
-        : GqlGetActiveOrder());
-
-      order.value = activeOrder ?? null;
+      const result = await api.getActiveOrder(type === "detail");
+      order.value = (result.activeOrder as ActiveOrder) ?? null;
     } catch (err) {
       if (err instanceof Error) {
         error.value = err.message || "Failed to fetch order";
@@ -41,13 +39,14 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { addItemToOrder: result } = await GqlAddItemToOrder({
+      const result = await api.addItemToOrder({
         variantId,
         quantity,
       });
 
-      if (result) {
-        const res = useOrderMutation(order, result);
+      const data = result.addItemToOrder as Record<string, unknown>;
+      if (data) {
+        const res = useOrderMutation(order, data);
         if (res.status === "error") {
           error.value = res.message;
         }
@@ -66,12 +65,11 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { removeOrderLine: result } = await GqlRemoveItemFromOrder({
-        orderLineId,
-      });
+      const result = await api.removeItemFromOrder(orderLineId);
 
-      if (result) {
-        const res = useOrderMutation(order, result);
+      const data = result.removeOrderLine as Record<string, unknown>;
+      if (data) {
+        const res = useOrderMutation(order, data);
         if (res.status === "error") {
           error.value = res.message;
         }
@@ -93,13 +91,11 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { adjustOrderLine: result } = await GqlAdjustOrderLine({
-        orderLineId,
-        quantity,
-      });
+      const result = await api.adjustOrderLine(orderLineId, quantity);
 
-      if (result) {
-        const res = useOrderMutation(order, result);
+      const data = result.adjustOrderLine as Record<string, unknown>;
+      if (data) {
+        const res = useOrderMutation(order, data);
         if (res.status === "error") {
           error.value = res.message;
         }
@@ -118,12 +114,11 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { applyCouponCode: result } = await GqlApplyCouponCode({
-        couponCode,
-      });
+      const result = await api.applyCouponCode(couponCode);
 
-      if (result) {
-        const res = useOrderMutation(order, result);
+      const data = result.applyCouponCode as Record<string, unknown>;
+      if (data) {
+        const res = useOrderMutation(order, data);
         if (res.status === "error") {
           error.value = res.message;
         }
@@ -143,12 +138,11 @@ export const useOrderStore = defineStore("order", () => {
 
     try {
       if (couponCode.value) {
-        const { removeCouponCode: result } = await GqlRemoveCouponCode({
-          couponCode: couponCode.value,
-        });
+        const result = await api.removeCouponCode(couponCode.value);
 
-        if (result) {
-          const res = useOrderMutation(order, result);
+        const data = result.removeCouponCode as Record<string, unknown>;
+        if (data) {
+          const res = useOrderMutation(order, data);
           if (res.status === "error") {
             error.value = res.message;
           }
@@ -172,9 +166,9 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const result = (await GqlSetCustomerForOrder({ input }))
-        .setCustomerForOrder;
-      const res = useOrderMutation(order, result);
+      const result = await api.setCustomerForOrder(input);
+      const data = result.setCustomerForOrder as Record<string, unknown>;
+      const res = useOrderMutation(order, data);
 
       if (res.status === "error") {
         error.value = res.message;
@@ -200,9 +194,9 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const result = (await GqlSetOrderShippingAddress({ input }))
-        .setOrderShippingAddress;
-      const res = useOrderMutation(order, result);
+      const result = await api.setOrderShippingAddress(input);
+      const data = result.setOrderShippingAddress as Record<string, unknown>;
+      const res = useOrderMutation(order, data);
 
       if (res.status === "error") {
         error.value = res.message;
@@ -221,8 +215,8 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { eligibleShippingMethods: result } = await GqlGetShippingMethods();
-      shippingMethods.value = result ?? [];
+      const result = await api.getShippingMethods();
+      shippingMethods.value = (result.eligibleShippingMethods as ShippingMethods) ?? [];
     } catch (err) {
       if (err instanceof Error) {
         error.value = err.message || "Failed to fetch shipping methods";
@@ -237,11 +231,10 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { setOrderShippingMethod: result } = await GqlSetShippingMethod({
-        id: shippingMethodId,
-      });
+      const result = await api.setShippingMethod(shippingMethodId);
 
-      const res = useOrderMutation(order, result);
+      const data = result.setOrderShippingMethod as Record<string, unknown>;
+      const res = useOrderMutation(order, data);
       if (res.status === "error") {
         error.value = res.message;
       }
@@ -259,8 +252,8 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { eligiblePaymentMethods: result } = await GqlGetPaymentMethods();
-      paymentMethods.value = result ?? [];
+      const result = await api.getPaymentMethods();
+      paymentMethods.value = (result.eligiblePaymentMethods as PaymentMethods) ?? [];
     } catch (err) {
       if (err instanceof Error) {
         error.value = err.message || "Failed to fetch payment methods";
@@ -275,10 +268,9 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { transitionOrderToState: result } = await GqlTransitionToState({
-        state,
-      });
-      const res = useOrderMutation(order, result);
+      const result = await api.transitionToState(state);
+      const data = result.transitionOrderToState as Record<string, unknown>;
+      const res = useOrderMutation(order, data);
       if (res.status === "error") {
         error.value = res.message;
       }
@@ -303,10 +295,9 @@ export const useOrderStore = defineStore("order", () => {
     error.value = null;
 
     try {
-      const { addPaymentToOrder: result } = await GqlAddPaymentToOrder({
-        input,
-      });
-      const res = useOrderMutation(order, result);
+      const result = await api.addPaymentToOrder(input);
+      const data = result.addPaymentToOrder as Record<string, unknown>;
+      const res = useOrderMutation(order, data);
       if (res.status === "error") {
         error.value = res.message;
       }

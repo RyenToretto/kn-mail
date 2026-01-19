@@ -1,20 +1,22 @@
 <script setup lang="ts">
+const api = useApi();
 const route = useRoute();
 const slug = route.params.slug as string;
 const { t, locale } = useI18n();
 const { i18NBaseUrl } = useRuntimeConfig().public;
 const productStore = useProductStore();
 
-const { data } = await useAsyncGql("GetProductDetail", {
-  slug,
-});
+const { data } = await useAsyncData(
+  `product-${slug}`,
+  () => api.getProductDetail(slug)
+);
 
-const product = computed(() => data.value.product);
+const product = computed(() => data.value?.product as Record<string, unknown> | undefined);
 
 watch(
   product,
   (p) => {
-    if (p) productStore.init(p);
+    if (p) productStore.init(p as any);
   },
   { immediate: true, flush: "post" },
 );
@@ -29,30 +31,31 @@ const formatPrice = (amount: number) =>
 
 // SEO Meta
 useSeoMeta({
-  title: product.value?.name,
-  description: product.value?.description,
-  ogTitle: product.value?.name,
-  ogDescription: product.value?.description,
-  twitterTitle: product.value?.name,
-  twitterDescription: product.value?.description,
+  title: product.value?.name as string,
+  description: product.value?.description as string,
+  ogTitle: product.value?.name as string,
+  ogDescription: product.value?.description as string,
+  twitterTitle: product.value?.name as string,
+  twitterDescription: product.value?.description as string,
 });
 
 // OgImage
 defineOgImageComponent("Frame", {
   title: t("messages.site.title"),
   description: `${product.value?.name}: ${product.value?.description}`,
-  image: product.value?.featuredAsset?.preview,
+  image: (product.value?.featuredAsset as Record<string, unknown>)?.preview as string,
   // logo: "/logo.png",
 });
 
 // SchemaOrg
 if (product.value && selectedVariant.value) {
-  const images = product.value.assets?.map((a) => a.preview) ?? [];
+  const assets = product.value.assets as { preview: string }[] | undefined;
+  const images = assets?.map((a) => a.preview) ?? [];
 
   useSchemaOrg([
     defineProduct({
       name: selectedVariant.value.name,
-      description: product.value.description,
+      description: product.value.description as string,
       sku: selectedVariant.value.sku,
       // brand: {
       //   "@type": "Brand",
@@ -84,7 +87,7 @@ if (product.value && selectedVariant.value) {
     }),
     defineBreadcrumb({
       itemListElement: [
-        ...getProductTrail(product.value).map((c, i) => ({
+        ...getProductTrail(product.value as any).map((c, i) => ({
           "@type": "ListItem",
           position: i + 1,
           name: c.label,
@@ -92,8 +95,8 @@ if (product.value && selectedVariant.value) {
         })),
         {
           "@type": "ListItem",
-          position: (getProductTrail(product.value).length ?? 0) + 1,
-          name: product.value.name,
+          position: (getProductTrail(product.value as any).length ?? 0) + 1,
+          name: product.value.name as string,
           item: `${i18NBaseUrl}/products/${product.value.slug}`,
         },
       ],
@@ -177,7 +180,7 @@ if (product.value && selectedVariant.value) {
       </h2>
       <ProductDescription
         v-if="product?.description"
-        :description="product?.description"
+        :description="product?.description as string"
       />
     </section>
 

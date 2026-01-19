@@ -1,26 +1,19 @@
 <script setup lang="ts">
-const { GQL_HOST: gqlHost, channelToken } = useRuntimeConfig().public;
-const { t, locale } = useI18n();
+const api = useApi();
+const { t } = useI18n();
 const orderStore = useOrderStore();
 
-// Create shared menu collections. Could be rewritten as composable.
-const { data: menuCollections } = await useAsyncGql("GetMenuCollections");
+// Create shared menu collections
+const { data: menuCollections } = await useAsyncData(
+  "menuCollections",
+  () => api.getMenuCollections()
+);
 useState("menuCollections", () => menuCollections.value);
 
-// Set GQL session and fetch current order
+// Fetch current order on mount
 onBeforeMount(async () => {
-  await useGqlSession(locale.value, gqlHost, channelToken, "default");
   await orderStore.fetchOrder();
 });
-
-// Set and watch locale for Vendure requests
-watch(
-  locale,
-  (val) => {
-    useGqlHost(`?languageCode=${val}`);
-  },
-  { immediate: true },
-);
 
 // OgImage
 defineOgImageComponent("Frame", {

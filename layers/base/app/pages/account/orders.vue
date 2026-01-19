@@ -5,6 +5,7 @@ import { SortOrder } from "~~/types/default";
 import type { TableColumn, TableRow } from "@nuxt/ui";
 import type { OrderTableRow } from "~~/types/general";
 
+const api = useApi();
 const { i18NBaseUrl } = useRuntimeConfig().public;
 const { locale, d, t } = useI18n();
 const localePath = useLocalePath();
@@ -17,25 +18,20 @@ const loading = ref(true);
 const UButton = resolveComponent("UButton");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
 
-const options = {
-  sort: { createdAt: SortOrder.DESC },
-  take: 10,
-};
+const orderHistoryData = ref<{ activeCustomer?: { orders?: { items: unknown[]; totalItems: number } } } | null>(null);
 
-const { data: orderHistory, refresh } = await useAsyncGql(
-  "GetOrderHistory",
-  {
-    options,
-  },
-  {
-    immediate: false,
-    server: false,
-  },
-);
+async function fetchOrderHistory() {
+  try {
+    const result = await api.getOrderHistory({ take: 10, skip: 0 });
+    orderHistoryData.value = result;
+  } catch (error) {
+    console.error("Failed to fetch order history:", error);
+  }
+}
 
-// TODO: remove uneeded data from the GQL payload
+// TODO: remove uneeded data from the API payload
 const orders = computed(() =>
-  (orderHistory.value.activeCustomer?.orders?.items ?? []).filter(
+  ((orderHistoryData.value?.activeCustomer?.orders?.items as any[]) ?? []).filter(
     (o) => o.state !== "AddingItems",
   ),
 );
@@ -150,7 +146,7 @@ onMounted(async () => {
     return;
   }
 
-  await refresh();
+  await fetchOrderHistory();
 
   loading.value = false;
 });

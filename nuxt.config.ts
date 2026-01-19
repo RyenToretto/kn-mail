@@ -29,7 +29,6 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      GQL_HOST: process.env.GQL_HOST,
       channelToken: process.env.CHANNEL_TOKEN,
       i18NBaseUrl: process.env.I18N_BASE_URL,
       payloadBase: process.env.PAYLOAD_BASE,

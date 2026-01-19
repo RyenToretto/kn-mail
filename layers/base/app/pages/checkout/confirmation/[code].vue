@@ -4,6 +4,7 @@ import { h } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import type { OrderLineRow } from "~~/types/general";
 
+const api = useApi();
 const { locale, t } = useI18n();
 const localePath = useLocalePath();
 const route = useRoute();
@@ -18,9 +19,12 @@ const {
   data: orderData,
   error,
   refresh,
-} = await useAsyncGql("GetOrderByCode", { code });
+} = await useAsyncData(
+  `order-${code}`,
+  () => api.getOrderByCode(code)
+);
 
-const order = computed(() => orderData.value?.orderByCode ?? null);
+const order = computed(() => (orderData.value?.orderByCode as Record<string, unknown>) ?? null);
 const hasError = computed(() => !!error.value);
 
 async function pollOrder(maxAttempts = 20, interval = 2000) {
@@ -34,7 +38,7 @@ async function pollOrder(maxAttempts = 20, interval = 2000) {
       break;
     }
 
-    const state = order.value?.state;
+    const state = order.value?.state as string | undefined;
     const initialStates = ["AddingItems", "ArrangingPayment"];
 
     if (!state) {
@@ -52,11 +56,11 @@ async function pollOrder(maxAttempts = 20, interval = 2000) {
 const formatPrice = (amount: number) =>
   new Intl.NumberFormat(locale.value, {
     style: "currency",
-    currency: order.value?.currencyCode || "EUR",
+    currency: (order.value?.currencyCode as string) || "EUR",
   }).format(amount / 100);
 
 const tableData = computed<OrderLineRow[]>(() =>
-  (order.value?.lines ?? []).map((line) => ({
+  ((order.value?.lines as any[]) ?? []).map((line) => ({
     name: line.productVariant?.name ?? "",
     qty: line.quantity,
     unitPrice: formatPrice(line.unitPriceWithTax),
@@ -83,8 +87,9 @@ const columns: TableColumn<OrderLineRow>[] = [
     footer: () => {
       if (!order.value) return null;
 
-      const taxTotal = order.value.taxSummary?.[0]?.taxTotal ?? 0;
-      const orderTotal = formatPrice(order.value.subTotal + taxTotal);
+      const taxSummary = order.value.taxSummary as { taxTotal: number }[] | undefined;
+      const taxTotal = taxSummary?.[0]?.taxTotal ?? 0;
+      const orderTotal = formatPrice((order.value.subTotal as number) + taxTotal);
 
       return h(
         "div",
@@ -157,13 +162,13 @@ onMounted(() => {
         <div>
           <dt class="font-medium">{{ t("messages.general.date") }}</dt>
           <dd v-if="isMounted">
-            {{ new Date(order?.orderPlacedAt).toLocaleDateString() }}
+            {{ new Date(order?.orderPlacedAt as string).toLocaleDateString() }}
           </dd>
           <USkeleton v-else class="h-4 w-full md:w-1/2" />
         </div>
         <div>
           <dt class="font-medium">{{ t("messages.shop.rateEmail") }}</dt>
-          <dd>{{ order?.customer?.emailAddress }}</dd>
+          <dd>{{ (order?.customer as any)?.emailAddress }}</dd>
         </div>
         <div>
           <dt class="font-medium">{{ t("messages.general.status") }}</dt>
@@ -198,11 +203,11 @@ onMounted(() => {
             {{ t("messages.general.shippingAddress") }}
           </h3>
           <address class="not-italic">
-            <div>{{ order?.shippingAddress?.fullName }}</div>
-            <div>{{ order?.shippingAddress?.streetLine1 }}</div>
+            <div>{{ (order?.shippingAddress as any)?.fullName }}</div>
+            <div>{{ (order?.shippingAddress as any)?.streetLine1 }}</div>
             <div>
-              {{ order?.shippingAddress?.city }},
-              {{ order?.shippingAddress?.postalCode }}
+              {{ (order?.shippingAddress as any)?.city }},
+              {{ (order?.shippingAddress as any)?.postalCode }}
             </div>
           </address>
         </div>
@@ -214,11 +219,11 @@ onMounted(() => {
           </h3>
           <p>
             {{ t("messages.general.paymentMethod") }}:
-            {{ order?.payments?.[0]?.method }}
+            {{ (order?.payments as any[])?.[0]?.method }}
           </p>
           <p>
             {{ t("messages.general.shippingSelect") }}:
-            {{ order?.shippingLines?.[0]?.shippingMethod?.name }}
+            {{ (order?.shippingLines as any[])?.[0]?.shippingMethod?.name }}
           </p>
         </div>
 
@@ -228,22 +233,22 @@ onMounted(() => {
           <dl class="space-y-1">
             <div class="flex justify-between">
               <dt>{{ t("messages.shop.subtotal") }}</dt>
-              <dd>{{ formatPrice(order?.subTotal) }}</dd>
+              <dd>{{ formatPrice(order?.subTotal as number) }}</dd>
             </div>
             <div class="flex justify-between">
               <dt>{{ t("messages.general.tax") }}</dt>
               <dd>
-                {{ formatPrice(order?.taxSummary?.[0]?.taxTotal ?? 0) }}
+                {{ formatPrice((order?.taxSummary as any[])?.[0]?.taxTotal ?? 0) }}
               </dd>
             </div>
             <div class="flex justify-between">
               <dt>{{ t("messages.general.shipping") }}</dt>
-              <dd>{{ formatPrice(order?.shippingWithTax) }}</dd>
+              <dd>{{ formatPrice(order?.shippingWithTax as number) }}</dd>
             </div>
             <div class="flex justify-between font-bold">
               <dt>{{ t("messages.shop.total") }}</dt>
               <dd>
-                {{ formatPrice(order?.totalWithTax) }}
+                {{ formatPrice(order?.totalWithTax as number) }}
               </dd>
             </div>
           </dl>

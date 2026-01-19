@@ -5,6 +5,7 @@ import type { FormSubmitEvent } from "@nuxt/ui";
 import type { ActiveCustomerDetail } from "~~/types/customer";
 import type { CheckoutState } from "~~/types/general";
 
+const api = useApi();
 const isSubmitted = defineModel<boolean>({ default: false });
 
 const { t } = useI18n();
@@ -29,7 +30,10 @@ const activeCustomer = computed(() => customer.value as ActiveCustomerDetail);
 const checkoutState = useState<CheckoutState>("checkoutState");
 const state = checkoutState.value.addressForm;
 
-const { data: countriesData } = await useAsyncGql("GetChannelCountries");
+const { data: countriesData } = await useAsyncData(
+  "channel-countries",
+  () => api.getChannelCountries()
+);
 
 const countries = computed(
   () =>

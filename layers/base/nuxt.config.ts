@@ -14,7 +14,6 @@ export default defineNuxtConfig({
     "@pinia/nuxt",
     "@vueuse/nuxt",
     "nitro-cloudflare-dev",
-    "nuxt-graphql-client",
     "nuxt-link-checker",
     "nuxt-og-image",
     "nuxt-schema-org",
@@ -52,33 +51,6 @@ export default defineNuxtConfig({
   scripts: {
     registry: {
       stripe: true,
-    },
-  },
-
-  // Global GraphQL Client Configuration
-  "graphql-client": {
-    codegen: {
-      disableOnBuild: false,
-      onlyOperationTypes: false,
-    },
-    documentPaths: [
-      "../layers/base/gql/queries",
-      "../layers/base/gql/fragments",
-    ],
-    clients: {
-      default: {
-        schema: "../graphql.schema.json",
-        host: process.env.GQL_HOST!,
-        token: {
-          type: "Bearer",
-          name: "Authorization",
-          value: "",
-        },
-        retainToken: true,
-        headers: {
-          "vendure-token": process.env.NUXT_PUBLIC_CHANNEL_TOKEN!,
-        },
-      },
     },
   },
 

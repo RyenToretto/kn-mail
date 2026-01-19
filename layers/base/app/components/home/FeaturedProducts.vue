@@ -1,8 +1,10 @@
 <script setup lang="ts">
-const { data } = await useAsyncGql("SearchProducts", {
-  term: "",
-  take: 4,
-});
+const api = useApi();
+
+const { data } = await useAsyncData(
+  "featured-products",
+  () => api.searchProducts({ term: "", take: 4 })
+);
 
 const items = computed(() => data.value?.search?.items ?? []);
 </script>

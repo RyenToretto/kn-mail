@@ -9,6 +9,8 @@ import type {
 } from "~~/types/customer";
 
 export const useCustomerStore = defineStore("customer", () => {
+  const api = useApi();
+  const authStore = useAuthStore();
   const customer = ref<ActiveCustomer | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -20,11 +22,8 @@ export const useCustomerStore = defineStore("customer", () => {
     error.value = null;
 
     try {
-      const { activeCustomer } = await (type === "detail"
-        ? GqlGetActiveCustomerDetail()
-        : GqlGetActiveCustomer());
-
-      customer.value = activeCustomer ?? null;
+      const result = await api.getActiveCustomer(type === "detail");
+      customer.value = (result.activeCustomer as ActiveCustomer) ?? null;
     } catch (err) {
       if (err instanceof Error) {
         error.value = err.message;
@@ -40,15 +39,22 @@ export const useCustomerStore = defineStore("customer", () => {
     rememberMe = true,
   ): Promise<LogInResult | undefined> {
     try {
-      const result = (
-        await GqlLogInUser({ emailAddress: email, password, rememberMe })
-      ).login;
+      const result = await api.login(email, password, rememberMe);
 
-      if ("id" in result) {
+      const loginResult = result.login as Record<string, unknown>;
+
+      if (loginResult && "id" in loginResult) {
+        // Save token to auth store
+        if (result.token) {
+          authStore.setSession(result.token, {
+            id: loginResult.id as string,
+            email: loginResult.identifier as string,
+          });
+        }
         await fetchCustomer();
       }
 
-      return result;
+      return loginResult as LogInResult;
     } catch (err) {
       console.error("Login error:", err);
       return undefined;
@@ -57,13 +63,14 @@ export const useCustomerStore = defineStore("customer", () => {
 
   async function logout(): Promise<LogOutResult | undefined> {
     try {
-      const result = (await GqlLogOutUser()).logout;
+      const result = await api.logout();
 
-      if (result.success) {
+      if (result.logout.success) {
         customer.value = null;
+        authStore.clearSession();
       }
 
-      return result;
+      return result.logout as LogOutResult;
     } catch (err) {
       console.error("Logout error:", err);
       return undefined;
@@ -77,10 +84,8 @@ export const useCustomerStore = defineStore("customer", () => {
     password?: string;
   }): Promise<RegisterResult | undefined> {
     try {
-      const result = (await GqlRegisterCustomerAccount({ input }))
-        .registerCustomerAccount;
-
-      return result;
+      const result = await api.register(input);
+      return result.registerCustomerAccount as RegisterResult;
     } catch (err) {
       console.error("Registration error:", err);
       return undefined;
@@ -89,13 +94,13 @@ export const useCustomerStore = defineStore("customer", () => {
 
   async function verify(token: string): Promise<VerifyResult | undefined> {
     try {
-      const result = (await GqlVerifyCustomerAccount({ token }))
-        .verifyCustomerAccount;
+      const result = await api.verifyAccount(token);
 
-      if ("identifier" in result) {
+      const verifyResult = result.verifyCustomerAccount as Record<string, unknown>;
+      if (verifyResult && "identifier" in verifyResult) {
         await fetchCustomer();
       }
-      return result;
+      return verifyResult as VerifyResult;
     } catch (err) {
       console.error("Unexpected verification error:", err);
       return undefined;
@@ -106,10 +111,8 @@ export const useCustomerStore = defineStore("customer", () => {
     emailAddress: string,
   ): Promise<RequestPasswordResetResult | undefined> {
     try {
-      const result = (await GqlRequestPasswordReset({ emailAddress }))
-        .requestPasswordReset;
-
-      return result;
+      const result = await api.requestPasswordReset(emailAddress);
+      return result.requestPasswordReset as RequestPasswordResetResult;
     } catch (err) {
       console.error("Password reset request error:", err);
       return undefined;
@@ -121,14 +124,14 @@ export const useCustomerStore = defineStore("customer", () => {
     password: string,
   ): Promise<ResetPasswordResult | undefined> {
     try {
-      const result = (await GqlResetPassword({ token, password }))
-        .resetPassword;
+      const result = await api.resetPassword(token, password);
 
-      if ("identifier" in result) {
+      const resetResult = result.resetPassword as Record<string, unknown>;
+      if (resetResult && "identifier" in resetResult) {
         await fetchCustomer();
       }
 
-      return result;
+      return resetResult as ResetPasswordResult;
     } catch (err) {
       console.error("Reset password error:", err);
       return undefined;

@@ -1,6 +1,7 @@
 import type { ProductDetail } from "~~/types/product";
 
 export const useProductStore = defineStore("product", () => {
+  const api = useApi();
   const product = ref<ProductDetail>(null);
   const selectedOptions = reactive<Record<string, string>>({});
 
@@ -81,12 +82,8 @@ export const useProductStore = defineStore("product", () => {
       return;
     }
 
-    const { product: variantStock } = await GqlGetProductVariantStock({
-      productId,
-      variantId,
-    });
-
-    liveStock.value = variantStock?.variantList.items?.[0]?.stockLevel ?? null;
+    const result = await api.getProductVariantStock(productId, variantId);
+    liveStock.value = result.product?.variantList.items?.[0]?.stockLevel ?? null;
   }
 
   return {

@@ -1,7 +1,7 @@
 import type { CheckoutState } from "~~/types/general";
 
 export function useCheckout() {
-  const GqlInstance = useGql();
+  const api = useApi();
   const orderStore = useOrderStore();
   const checkoutState = useState<CheckoutState>("checkoutState");
 
@@ -33,8 +33,8 @@ export function useCheckout() {
     () => checkoutState.value.paymentForm.code,
     async (n, o) => {
       if (n && n !== o) {
-        await GqlInstance("SetOrderCustomFields", {
-          input: { customFields: { paymentProvider: n } },
+        await api.setOrderCustomFields({
+          paymentProvider: n,
         });
 
         await recalcShipping();
